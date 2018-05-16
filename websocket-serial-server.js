@@ -81,7 +81,9 @@ io.on('connection', function(socket) {
   let delimiter = ';';
   let endCharacter = '>';
 
-  let angle = 0;
+  let driveAngle = 0;
+  let angleOffset = 0;
+  let angleOffsetMultiplier = 1;
   let driveSpeed = 0;
   let rotationSpeed = 0;
 
@@ -109,13 +111,19 @@ io.on('connection', function(socket) {
     switch (data) {
       case 'ArrowUp':
         driveSpeed = 1.0;
+        driveAngle = 0;
+        angleOffsetMultiplier = 0.5;
         break;
       case 'ArrowDown':
-        driveSpeed = -1.0;
+        driveSpeed = 1.0;
+        driveAngle = Math.PI;
+        angleOffsetMultiplier = -0.5;
         break;
       case '!ArrowUp':
       case '!ArrowDown':
         driveSpeed = 0;
+        driveAngle = 0;
+        angleOffsetMultiplier = 1;
         break;
       case 'ArrowLeft':
         rotationSpeed = -1;
@@ -127,13 +135,25 @@ io.on('connection', function(socket) {
       case '!ArrowRight':
         rotationSpeed = 0;
         break;
+      case 'z':
+        angleOffset = Math.PI / 2;
+        break;
+      case 'x':
+        angleOffset = -Math.PI / 2;
+        break;
+      case '!z':
+      case '!x':
+        angleOffset = 0;
+        break;
       case 'None':
         break;
     }
-
+    let computedAngle =
+      Math.PI * 2 + driveAngle + angleOffsetMultiplier * angleOffset;
+    computedAngle = computedAngle % (Math.PI * 2);
     let serialMessage =
       startCharacter +
-      angle +
+      computedAngle +
       delimiter +
       driveSpeed +
       delimiter +
