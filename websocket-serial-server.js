@@ -5,10 +5,41 @@ const path = require('path');
 
 const SerialPort = require('serialport');
 const Readline = SerialPort.parsers.Readline;
-const port = new SerialPort('COM39');
 const parser = new Readline();
-port.pipe(parser);
-parser.on('data', onData);
+let port;
+
+SerialPort.list()
+  .then(list => {
+    // console.log('serialports: ');
+    // console.log(list);
+    let name;
+    let orionFound = false;
+    for (let i = 0; i < list.length; i++) {
+      let port = list[i];
+      if (port.productId === '7523') {
+        console.log('found the orion at port: ' + port.comName);
+        name = port.comName;
+        orionFound = true;
+        break;
+      }
+    }
+    if (!orionFound) {
+      console.log("Couldn't find an orion board. Exiting!!!");
+      process.exit();
+    }
+    port = new SerialPort(name, { baudRate: 115200 }, function(err) {
+      if (err) {
+        return console.log('Error: ', err.message);
+      }
+      console.log('opened a serialport!! Wuuuhuuu!');
+    });
+
+    port.pipe(parser);
+    parser.on('data', onData);
+  })
+  .catch(function(err) {
+    console.log(err);
+  });
 
 function onData(data) {
   console.log('from port: ' + data);
@@ -136,13 +167,16 @@ io.on('connection', function(socket) {
         rotationSpeed = 0;
         break;
       case 'z':
+        driveSpeed = 1;
         angleOffset = Math.PI / 2;
         break;
       case 'x':
+        driveSpeed = 1;
         angleOffset = -Math.PI / 2;
         break;
       case '!z':
       case '!x':
+        driveSpeed = 0;
         angleOffset = 0;
         break;
       case 'None':
