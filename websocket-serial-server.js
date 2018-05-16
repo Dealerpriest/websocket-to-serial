@@ -3,41 +3,17 @@ const express = require('express');
 const socketIO = require('socket.io');
 const path = require('path');
 
-const serial = require('serialport');
-let serialPort;
+const SerialPort = require('serialport');
+const Readline = SerialPort.parsers.Readline;
+const port = new SerialPort('COM39');
+const parser = new Readline();
+port.pipe(parser);
+parser.on('data', onData);
 
-//Assumes our device is the last in the list
-serial.list().then(list => {
-  console.log('serialports: ');
-  console.log(list);
-  let name = list[list.length - 1].comName;
-  serialPort = new serial(name, { baudRate: 115200 }, function(err) {
-    if (err) {
-      return console.log('Error: ', err.message);
-    }
-    console.log('opened a serialport!! Wuuuhuuu!');
-  });
-});
-
-let state = 30;
-let sendSerial = () => {
-  let timeOutDuration = 20;
-  state += 1;
-  if (state > 80) {
-    state = 30;
-    timeOutDuration = 1500;
-  }
-  console.log('changing state');
-  serialPort.write('pitch:' + state + '\n', function(err) {
-    if (err) {
-      return console.log('Error on write: ', err.message);
-    }
-    console.log('wrote: ' + state);
-  });
-  setTimeout(sendSerial, timeOutDuration);
-};
-
-// setTimeout(sendSerial, 500);
+function onData(data) {
+  console.log('from port: ' + data);
+  // port.write('>');
+}
 
 process.on('exit', function() {
   console.log('Goodbye!');
@@ -122,6 +98,7 @@ io.on('connection', function(socket) {
 
   robot.on('motorControl', data => {
     console.log('received socket data: ' + data);
+
     // console.log(data);
     // serialPort.write(data, function(err) {
     //   if (err) {
@@ -164,5 +141,11 @@ io.on('connection', function(socket) {
       endCharacter;
 
     console.log('sending to serial: ' + serialMessage);
+    port.write(serialMessage, err => {
+      if (err) {
+        return console.log('Error on write: ', err.message);
+      }
+      console.log('wrote: ' + serialMessage);
+    });
   });
 });
