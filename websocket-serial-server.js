@@ -205,6 +205,11 @@ io.on('connection', function(socket) {
         pitch++;
         pitch = Math.min(180, pitch);
         break;
+      case '!b':
+      case '!m':
+      case '!h':
+      case '!n':
+        messageType = 'servoControl';
       case 'None':
         break;
     }
