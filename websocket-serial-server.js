@@ -210,6 +210,7 @@ io.on('connection', function(socket) {
       case '!h':
       case '!n':
         messageType = 'servoControl';
+        break;
       case 'None':
         break;
     }
