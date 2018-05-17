@@ -112,11 +112,16 @@ io.on('connection', function(socket) {
   let delimiter = ';';
   let endCharacter = '>';
 
+  //motor control
   let driveAngle = 0;
   let angleOffset = 0;
   let angleOffsetMultiplier = 1;
   let driveSpeed = 0;
   let rotationSpeed = 0;
+
+  // servocontrol
+  let pitch = 90;
+  let yaw = 90;
 
   robot.on('cameraControl', data => {
     console.log('received socket data:');
@@ -139,6 +144,7 @@ io.on('connection', function(socket) {
     //   }
     //   console.log('wrote: ' + data);
     // });
+    let messageType = 'motorControl';
     switch (data) {
       case 'ArrowUp':
         driveSpeed = 1.0;
@@ -179,13 +185,33 @@ io.on('connection', function(socket) {
         driveSpeed = 0;
         angleOffset = 0;
         break;
+      case 'b':
+        messageType = 'servoControl';
+        yaw--;
+        yaw = Math.max(0, yaw);
+        break;
+      case 'm':
+        messageType = 'servoControl';
+        yaw++;
+        yaw = Math.min(180, yaw);
+        break;
+      case 'h':
+        messageType = 'servoControl';
+        pitch--;
+        pitch = Math.max(0, pitch);
+        break;
+      case 'n':
+        messageType = 'servoControl';
+        pitch++;
+        pitch = Math.min(180, pitch);
+        break;
       case 'None':
         break;
     }
     let computedAngle =
       Math.PI * 2 + driveAngle + angleOffsetMultiplier * angleOffset;
     computedAngle = computedAngle % (Math.PI * 2);
-    let serialMessage =
+    let serialMotorMessage =
       startCharacter +
       computedAngle +
       delimiter +
@@ -194,12 +220,18 @@ io.on('connection', function(socket) {
       rotationSpeed +
       endCharacter;
 
-    console.log('sending to serial: ' + serialMessage);
-    port.write(serialMessage, err => {
+    let serialServoMessage =
+      startCharacter + 's' + pitch + delimiter + yaw + endCharacter;
+
+    let messageToSend =
+      messageType === 'motorControl' ? serialMotorMessage : serialServoMessage;
+
+    console.log('sending to serial: ' + messageToSend);
+    port.write(messageToSend, err => {
       if (err) {
         return console.log('Error on write: ', err.message);
       }
-      console.log('wrote: ' + serialMessage);
+      console.log('wrote: ' + messageToSend);
     });
   });
 });
