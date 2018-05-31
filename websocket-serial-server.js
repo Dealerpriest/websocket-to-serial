@@ -122,28 +122,58 @@ io.on('connection', function(socket) {
   // servocontrol
   let pitch = 90;
   let yaw = 90;
+  const pitchMin = 20,
+    pitchMax = 160;
+  const yawMin = 20,
+    yawMax = 160;
 
+  let serialStamp = Date.now();
+  let minSerialInterval = 10;
+
+  serialTimeout = null;
+
+  //ok. So this part is a little bit hacky where we just check for certain words in the incoming message and build our serialmessage accordingly.
   robot.on('cameraControl', data => {
     console.log('received socket data:');
     console.log(data);
-    // serialPort.write(data, function(err) {
-    //   if (err) {
-    //     return console.log('Error on write: ', err.message);
-    //   }
-    //   console.log('wrote: ' + data);
-    // });
+    let value = '';
+    if (data.startsWith('changePitch')) {
+      value = data.slice(11);
+      pitch += Number(value);
+    } else {
+      value = data.slice(9);
+      yaw += Number(value);
+    }
+    pitch = Math.max(pitchMin, pitch);
+    pitch = Math.min(pitchMax, pitch);
+
+    yaw = Math.max(yawMin, yaw);
+    yaw = Math.min(yawMax, yaw);
+
+    let serialServoMessage =
+      startCharacter + 's' + pitch + delimiter + yaw + endCharacter;
+
+    console.log('clearing timeout: ' + serialTimeout);
+    clearTimeout(serialTimeout);
+    let durationSinceSerialStamp = Date.now() - serialStamp;
+    if (durationSinceSerialStamp < minSerialInterval) {
+      console.log(
+        'setting a timeout for serialout because port might get overloaded'
+      );
+      serialTimeout = setTimeout(() => {
+        console.log('running timeout function');
+        sendToSerial(serialServoMessage);
+      }, minSerialInterval + 1);
+    } else {
+      console.log(
+        'no timeout! durationSinceSerialStamp: ' + durationSinceSerialStamp
+      );
+      sendToSerial(serialServoMessage);
+    }
   });
 
   robot.on('motorControl', data => {
     console.log('received socket data: ' + data);
-
-    // console.log(data);
-    // serialPort.write(data, function(err) {
-    //   if (err) {
-    //     return console.log('Error on write: ', err.message);
-    //   }
-    //   console.log('wrote: ' + data);
-    // });
     let messageType = 'motorControl';
     switch (data) {
       case 'ArrowUp':
@@ -232,6 +262,12 @@ io.on('connection', function(socket) {
     let messageToSend =
       messageType === 'motorControl' ? serialMotorMessage : serialServoMessage;
 
+    sendToSerial(messageToSend);
+  });
+
+  function sendToSerial(messageToSend) {
+    serialStamp = Date.now();
+    console.log('updating serialStamp: ' + serialStamp);
     console.log('sending to serial: ' + messageToSend);
     port.write(messageToSend, err => {
       if (err) {
@@ -239,5 +275,5 @@ io.on('connection', function(socket) {
       }
       console.log('wrote: ' + messageToSend);
     });
-  });
+  }
 });
