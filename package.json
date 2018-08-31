@@ -1,19 +1,23 @@
 {
   "name": "websocket-to-serial",
   "version": "1.0.0",
-  "description":
-    "a node server for bridging between browser and serial port, using sockets",
+  "description": "a node server for bridging between browser and serial port, using sockets",
   "main": "websocket-serial-server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nf start"
   },
-  "keywords": ["serial", "websockets", "socketio", "robotics"],
+  "keywords": [
+    "serial",
+    "websockets",
+    "socketio",
+    "robotics"
+  ],
   "author": "Gunnar Oledal",
   "license": "ISC",
   "dependencies": {
     "express": "^4.16.3",
-    "foreman": "^2.0.0",
+    "foreman": "^3.0.1",
     "serialport": "^6.1.1",
     "socket.io": "^2.0.4"
   }
