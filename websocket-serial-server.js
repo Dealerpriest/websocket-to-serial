@@ -17,7 +17,7 @@ SerialPort.list()
     for (let i = 0; i < list.length; i++) {
       let port = list[i];
       if (port.productId === '7523') {
-        console.log('found the orion at port: ' + port.comName);
+        console.log('found the orion at port (I.E. found a port with productId 7523): ' + port.comName);
         name = port.comName;
         orionFound = true;
         break;
@@ -113,19 +113,28 @@ io.on('connection', function(socket) {
   let endCharacter = '>';
 
   //motor control
-  let driveAngle = 0;
+  // let driveAngle = 0;
+  let angleReference = 0;
   let angleOffset = 0;
   let angleOffsetMultiplier = 1;
-  let driveSpeed = 0;
-  let rotationSpeed = 0;
+  // let driveSpeed = 0;
+  // let rotationSpeed = 0;
 
   // servocontrol
-  let pitch = 90;
-  let yaw = 90;
+  // let pitch = 90;
+  // let yaw = 90;
   const pitchMin = 20,
     pitchMax = 160;
   const yawMin = 20,
     yawMax = 160;
+
+  let robotState = {
+    driveAngle: 0,
+    driveSpeed: 0,
+    rotationSpeed: 0,
+    pitch: 90,
+    yaw: 90
+  };
 
   let serialStamp = Date.now();
   let minSerialInterval = 10;
@@ -133,25 +142,25 @@ io.on('connection', function(socket) {
   serialTimeout = null;
 
   //ok. So this part is a little bit hacky where we just check for certain words in the incoming message and build our serialmessage accordingly.
-  robot.on('cameraControl', data => {
-    console.log('received socket data:');
+  robot.on('robotMouseControl', data => {
+    console.log('received mouse socket data:');
     console.log(data);
     let value = '';
     if (data.startsWith('changePitch')) {
       value = data.slice(11);
-      pitch += Number(value);
+      robotState.pitch += Number(value);
     } else {
       value = data.slice(9);
-      yaw += Number(value);
+      state.yaw += Number(value);
     }
-    pitch = Math.max(pitchMin, pitch);
-    pitch = Math.min(pitchMax, pitch);
+    robotState.pitch = Math.max(pitchMin, robotState.pitch);
+    robotState.pitch = Math.min(pitchMax, robotState.pitch);
 
-    yaw = Math.max(yawMin, yaw);
-    yaw = Math.min(yawMax, yaw);
+    state.yaw = Math.max(yawMin, state.yaw);
+    state.yaw = Math.min(yawMax, state.yaw);
 
     let serialServoMessage =
-      startCharacter + 's' + pitch + delimiter + yaw + endCharacter;
+      startCharacter + 's' + robotState.pitch + delimiter + state.yaw + endCharacter;
 
     console.log('clearing timeout: ' + serialTimeout);
     clearTimeout(serialTimeout);
@@ -172,98 +181,104 @@ io.on('connection', function(socket) {
     }
   });
 
-  robot.on('motorControl', data => {
-    console.log('received socket data: ' + data);
-    let messageType = 'motorControl';
+  robot.on('robotKeyboardControl', data => {
+    console.log('received robotKeyboardControl socket data: ' + data);
+    // let messageType = 'motorControl';
     switch (data) {
       case 'ArrowUp':
-        driveSpeed = 1.0;
-        driveAngle = 0;
+        robotState.driveSpeed = 1.0;
+        angleReference = 0;
         angleOffsetMultiplier = 0.5;
         break;
       case 'ArrowDown':
-        driveSpeed = 1.0;
-        driveAngle = Math.PI;
+        robotState.driveSpeed = 1.0;
+        angleReference = Math.PI;
         angleOffsetMultiplier = -0.5;
         break;
       case '!ArrowUp':
       case '!ArrowDown':
-        driveSpeed = 0;
-        driveAngle = 0;
+        robotState.driveSpeed = 0;
+        angleReference = 0;
         angleOffsetMultiplier = 1;
         break;
       case 'ArrowLeft':
-        rotationSpeed = -1;
+        robotState.rotationSpeed = -1;
         break;
       case 'ArrowRight':
-        rotationSpeed = 1;
+        robotState.rotationSpeed = 1;
         break;
       case '!ArrowLeft':
       case '!ArrowRight':
-        rotationSpeed = 0;
+        robotState.rotationSpeed = 0;
         break;
       case 'z':
-        driveSpeed = 1;
+        robotState.driveSpeed = 1;
         angleOffset = Math.PI / 2;
         break;
       case 'x':
-        driveSpeed = 1;
+        robotState.driveSpeed = 1;
         angleOffset = -Math.PI / 2;
         break;
       case '!z':
       case '!x':
-        driveSpeed = 0;
+        robotState.driveSpeed = 0;
         angleOffset = 0;
         break;
       case 'b':
-        messageType = 'servoControl';
+        // messageType = 'servoControl';
         yaw--;
-        yaw = Math.max(0, yaw);
+        yaw = Math.max(yawMin, yaw);
         break;
       case 'm':
-        messageType = 'servoControl';
+        // messageType = 'servoControl';
         yaw++;
-        yaw = Math.min(180, yaw);
+        yaw = Math.min(yawMax, yaw);
         break;
       case 'h':
-        messageType = 'servoControl';
+        // messageType = 'servoControl';
         pitch--;
-        pitch = Math.max(0, pitch);
+        pitch = Math.max(pitchMin, pitch);
         break;
       case 'n':
-        messageType = 'servoControl';
+        // messageType = 'servoControl';
         pitch++;
-        pitch = Math.min(180, pitch);
+        pitch = Math.min(pitchMax, pitch);
         break;
       case '!b':
       case '!m':
       case '!h':
       case '!n':
-        messageType = 'servoControl';
+        // messageType = 'servoControl';
         break;
       case 'None':
         break;
     }
-    let computedAngle =
-      Math.PI * 2 + driveAngle + angleOffsetMultiplier * angleOffset;
-    computedAngle = computedAngle % (Math.PI * 2);
-    let serialMotorMessage =
-      startCharacter +
-      computedAngle +
-      delimiter +
-      driveSpeed +
-      delimiter +
-      rotationSpeed +
-      endCharacter;
+    robotState.driveAngle =
+      Math.PI * 2 + angleReference + angleOffsetMultiplier * angleOffset;
+    robotState.driveAngle = robotState.driveAngle % (Math.PI * 2);
 
-    let serialServoMessage =
-      startCharacter + 's' + pitch + delimiter + yaw + endCharacter;
+    let serialMessage = 
+    startCharacter +
+    robotState.driveAngle +
+    delimiter +
+    robotState.driveSpeed +
+    delimiter +
+    robotState.rotationSpeed +
+    delimiter +
+    robotState.pitch +
+    delimiter +
+    robotState.yaw +
+    endCharacter;
 
-    let messageToSend =
-      messageType === 'motorControl' ? serialMotorMessage : serialServoMessage;
+    sendToSerial(serialMessage);
 
-    sendToSerial(messageToSend);
+    robot.emit('robotState', JSON.stringify(robotState));
   });
+
+  robot.on('sensorControl', (data) => {
+    console.log('received sensorControl socket data: ' + data);
+
+  })
 
   function sendToSerial(messageToSend) {
     serialStamp = Date.now();
