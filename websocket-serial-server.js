@@ -268,6 +268,8 @@ io.on('connection', function(socket) {
     robotState.pitch +
     delimiter +
     robotState.yaw +
+    delimiter +
+    '90' +
     endCharacter;
 
     sendToSerial(serialMessage);
