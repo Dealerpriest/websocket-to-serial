@@ -226,23 +226,23 @@ io.on('connection', function(socket) {
         break;
       case 'b':
         // messageType = 'servoControl';
-        yaw--;
-        yaw = Math.max(yawMin, yaw);
+        robotState.yaw--;
+        robotState.yaw = Math.max(yawMin, robotState.yaw);
         break;
       case 'm':
         // messageType = 'servoControl';
-        yaw++;
-        yaw = Math.min(yawMax, yaw);
+        robotState.yaw++;
+        robotState.yaw = Math.min(yawMax, robotState.yaw);
         break;
       case 'h':
         // messageType = 'servoControl';
-        pitch--;
-        pitch = Math.max(pitchMin, pitch);
+        robotState.pitch--;
+        robotState.pitch = Math.max(pitchMin, robotState.pitch);
         break;
       case 'n':
         // messageType = 'servoControl';
-        pitch++;
-        pitch = Math.min(pitchMax, pitch);
+        robotState.pitch++;
+        robotState.pitch = Math.min(pitchMax, robotState.pitch);
         break;
       case '!b':
       case '!m':
@@ -261,9 +261,9 @@ io.on('connection', function(socket) {
     startCharacter +
     robotState.driveAngle +
     delimiter +
-    robotState.driveSpeed +
+    robotState.driveSpeed*0.2 +
     delimiter +
-    robotState.rotationSpeed +
+    robotState.rotationSpeed*0.2 +
     delimiter +
     robotState.pitch +
     delimiter +
