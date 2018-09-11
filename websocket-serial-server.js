@@ -2,6 +2,16 @@ const express = require('express');
 // const http = require('http').Server(app);
 const socketIO = require('socket.io');
 const path = require('path');
+const Struct = require('struct');
+
+let sendStruct = Struct()
+            .floatle('driveAngle')
+            .floatle('driveSpeed')
+            .floatle('rotationSpeed')
+            .word16Sle('pitch')
+            .word16Sle('yaw')
+            .word16Sle('height');
+sendStruct.allocate();
 
 const SerialPort = require('serialport');
 const Readline = SerialPort.parsers.Readline;
@@ -27,6 +37,7 @@ SerialPort.list()
       console.log("Couldn't find an orion board. Exiting!!!");
       process.exit();
     }
+    //TODO: remove this testing code and implement this concept in the actual code!
     port = new SerialPort(name, { baudRate: 115200 }, function(err) {
       if (err) {
         return console.log('Error: ', err.message);
@@ -36,6 +47,16 @@ SerialPort.list()
 
     port.pipe(parser);
     parser.on('data', onData);
+
+    // setInterval(()=>{
+    //   sendStruct.fields.pitch++;
+    //   port.write(sendStruct.buffer(), err => {
+    //     if (err) {
+    //       return console.log('Error on write: ', err.message);
+    //     }
+    //     console.log('wrote: ' + sendStruct);
+    //   });
+    // }, 1500);
   })
   .catch(function(err) {
     console.log(err);
@@ -133,7 +154,8 @@ io.on('connection', function(socket) {
     driveSpeed: 0,
     rotationSpeed: 0,
     pitch: 90,
-    yaw: 90
+    yaw: 90,
+    height: 90
   };
 
   let serialStamp = Date.now();
@@ -142,6 +164,8 @@ io.on('connection', function(socket) {
   serialTimeout = null;
 
   //ok. So this part is a little bit hacky where we just check for certain words in the incoming message and build our serialmessage accordingly.
+
+  // TODO: finish this function. As of now it's in some limbo state where I left it for dead working on other functionality.
   robot.on('robotMouseControl', data => {
     console.log('received mouse socket data:');
     console.log(data);
@@ -257,22 +281,31 @@ io.on('connection', function(socket) {
       Math.PI * 2 + angleReference + angleOffsetMultiplier * angleOffset;
     robotState.driveAngle = robotState.driveAngle % (Math.PI * 2);
 
-    let serialMessage = 
-    startCharacter +
-    robotState.driveAngle +
-    delimiter +
-    robotState.driveSpeed*0.2 +
-    delimiter +
-    robotState.rotationSpeed*0.2 +
-    delimiter +
-    robotState.pitch +
-    delimiter +
-    robotState.yaw +
-    delimiter +
-    '90' +
-    endCharacter;
+    // let serialMessage = 
+    // startCharacter +
+    // robotState.driveAngle +
+    // delimiter +
+    // robotState.driveSpeed*0.2 +
+    // delimiter +
+    // robotState.rotationSpeed*0.2 +
+    // delimiter +
+    // robotState.pitch +
+    // delimiter +
+    // robotState.yaw +
+    // delimiter +
+    // '90' +
+    // endCharacter;
 
-    sendToSerial(serialMessage);
+    // msg is a reference for r/w values into the struct
+    let msg = sendStruct.fields;
+    msg.driveAngle = robotState.driveAngle;
+    msg.driveSpeed = robotState.driveSpeed;
+    msg.rotationSpeed = robotState.rotationSpeed;
+    msg.pitch = robotState.pitch;
+    msg.yaw = robotState.yaw;
+    msg.height = robotState.height;
+
+    sendToSerial(sendStruct.buffer());
 
     robot.emit('robotState', JSON.stringify(robotState));
   });
@@ -285,12 +318,14 @@ io.on('connection', function(socket) {
   function sendToSerial(messageToSend) {
     serialStamp = Date.now();
     console.log('updating serialStamp: ' + serialStamp);
-    console.log('sending to serial: ' + messageToSend);
+    console.log('sending to serial: ');
+    console.log(messageToSend);
     port.write(messageToSend, err => {
       if (err) {
         return console.log('Error on write: ', err.message);
       }
-      console.log('wrote: ' + messageToSend);
+      console.log('wrote: ');
+      console.log(messageToSend);
     });
   }
 });
