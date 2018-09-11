@@ -18,6 +18,8 @@ const Readline = SerialPort.parsers.Readline;
 const parser = new Readline();
 let port;
 
+let connectedToOrionBoard = false;
+
 //Here we define the function in order to call it again if it fails. First call is right below the definition.
 let establishSerialConnection = () => {
   SerialPort.list()
@@ -45,12 +47,20 @@ let establishSerialConnection = () => {
 
       port = new SerialPort(name, { baudRate: 115200 }, function(err) {
         if (err) {
-          return console.log('Error: ', err.message);
+          return console.log('Error opening port: ', err.message);
         }
         console.log('opened a serialport!! Wuuuhuuu!');
+        connectedToOrionBoard = true;
       });
 
       port.pipe(parser);
+
+      port.on('error', (err)=>{
+        console.log("error on port: " + err);
+        connectedToOrionBoard = false;
+        establishSerialConnection();
+      })
+
       parser.on('data', onData);
 
       // setInterval(()=>{
@@ -324,14 +334,29 @@ io.on('connection', function(socket) {
 
   })
 
+  // TODO: There is some bug when we disconnect the board during operation. Probably related to reference and memory leak.
+  // It seems the establishConnection might be called from weird/several contexts as of now.
   function sendToSerial(messageToSend) {
+    if(!connectedToOrionBoard || !port.isOpen){
+      connectedToOrionBoard = false;
+      console.log("port not opened. Please make sure the orion board is connected");
+      port.close(err => {
+        delete port;
+        establishSerialConnection();
+      });
+      
+      return;
+    }
     serialStamp = Date.now();
     console.log('updating serialStamp: ' + serialStamp);
     console.log('sending to serial: ');
     console.log(messageToSend);
     port.write(messageToSend, err => {
       if (err) {
-        return console.log('Error on write: ', err.message);
+        console.log('Error on write: ', err.message);
+        connectedToOrionBoard = false;
+        // establishSerialConnection();
+        return;
       }
       console.log('wrote: ');
       console.log(messageToSend);
