@@ -49,7 +49,7 @@ let establishSerialConnection = () => {
         // process.exit();
       }
 
-      port = new SerialPort(name, { baudRate: 115200 }, function(err) {
+      port = new SerialPort(name, { baudRate: 9600 }, function(err) {
         if (err) {
           return console.log('Error opening port: ', err.message);
         }
