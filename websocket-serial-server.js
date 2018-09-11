@@ -182,7 +182,7 @@ io.on('connection', function(socket) {
   };
 
   let serialStamp = Date.now();
-  let minSerialInterval = 10;
+  let minSerialInterval = 50;
 
   serialTimeout = null;
 
@@ -231,6 +231,7 @@ io.on('connection', function(socket) {
   robot.on('robotKeyboardControl', data => {
     console.log('received robotKeyboardControl socket data: ' + data);
     // let messageType = 'motorControl';
+    let propagateToSerial = true;
     switch (data) {
       case 'ArrowUp':
         robotState.driveSpeed = 1.0;
@@ -283,18 +284,19 @@ io.on('connection', function(socket) {
         break;
       case 'h':
         // messageType = 'servoControl';
-        robotState.pitch--;
+        robotState.pitch++;
         robotState.pitch = Math.max(pitchMin, robotState.pitch);
         break;
       case 'n':
         // messageType = 'servoControl';
-        robotState.pitch++;
+        robotState.pitch--;
         robotState.pitch = Math.min(pitchMax, robotState.pitch);
         break;
       case '!b':
       case '!m':
       case '!h':
       case '!n':
+        propagateToSerial = false;
         // messageType = 'servoControl';
         break;
       case 'None':
@@ -328,7 +330,9 @@ io.on('connection', function(socket) {
     msg.yaw = robotState.yaw;
     msg.height = robotState.height;
 
-    sendToSerial(sendStruct.buffer());
+    if(propagateToSerial){
+      sendToSerial(sendStruct.buffer());
+    }
 
     robot.emit('robotState', JSON.stringify(robotState));
   });
