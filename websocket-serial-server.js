@@ -4,7 +4,9 @@ const socketIO = require('socket.io');
 const path = require('path');
 const Struct = require('struct');
 
+const confirmCorrect = 123;
 let sendStruct = Struct()
+            .word16Ule('confirm')
             .floatle('driveAngle')
             .floatle('driveSpeed')
             .floatle('rotationSpeed')
@@ -12,6 +14,8 @@ let sendStruct = Struct()
             .word16Sle('yaw')
             .word16Sle('height');
 sendStruct.allocate();
+
+sendStruct.fields.confirm = confirmCorrect;
 
 const SerialPort = require('serialport');
 const Readline = SerialPort.parsers.Readline;
