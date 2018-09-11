@@ -6,13 +6,13 @@ const Struct = require('struct');
 
 const confirmCorrect = 123;
 let sendStruct = Struct()
-            .word16Ule('confirm')
-            .floatle('driveAngle')
-            .floatle('driveSpeed')
-            .floatle('rotationSpeed')
-            .word16Sle('pitch')
-            .word16Sle('yaw')
-            .word16Sle('height');
+                  .floatle('driveAngle')
+                  .floatle('driveSpeed')
+                  .floatle('rotationSpeed')
+                  .word16Sle('pitch')
+                  .word16Sle('yaw')
+                  .word16Sle('height');
+                  .word16Ule('confirm')
 sendStruct.allocate();
 
 sendStruct.fields.confirm = confirmCorrect;
