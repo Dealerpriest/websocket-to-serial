@@ -18,54 +18,63 @@ const Readline = SerialPort.parsers.Readline;
 const parser = new Readline();
 let port;
 
-SerialPort.list()
-  .then(list => {
-    // console.log('serialports: ');
-    // console.log(list);
-    let name;
-    let orionFound = false;
-    for (let i = 0; i < list.length; i++) {
-      let port = list[i];
-      if (port.productId === '7523') {
-        console.log('found the orion at port (I.E. found a port with productId 7523): ' + port.comName);
-        name = port.comName;
-        orionFound = true;
-        break;
+//Here we define the function in order to call it again if it fails. First call is right below the definition.
+let establishSerialConnection = () => {
+  SerialPort.list()
+    .then(list => {
+      // console.log('serialports: ');
+      // console.log(list);
+      let name;
+      let orionFound = false;
+      for (let i = 0; i < list.length; i++) {
+        let candidate = list[i];
+        if (candidate.productId === '7523') {
+          console.log('found the orion at port (I.E. found a port with productId 7523): ' + candidate.comName);
+          name = candidate.comName;
+          orionFound = true;
+          break;
+        }
       }
-    }
-    if (!orionFound) {
-      console.log("Couldn't find an orion board. Exiting!!!");
-      process.exit();
-    }
-    //TODO: remove this testing code and implement this concept in the actual code!
-    port = new SerialPort(name, { baudRate: 115200 }, function(err) {
-      if (err) {
-        return console.log('Error: ', err.message);
+      if (!orionFound) {
+        console.log("Couldn't find an orion board. Trying again!!!");
+        console.log("(press ctrl+c to exit)");
+        setTimeout(establishSerialConnection, 2000);
+        return;
+        // process.exit();
       }
-      console.log('opened a serialport!! Wuuuhuuu!');
+
+      port = new SerialPort(name, { baudRate: 115200 }, function(err) {
+        if (err) {
+          return console.log('Error: ', err.message);
+        }
+        console.log('opened a serialport!! Wuuuhuuu!');
+      });
+
+      port.pipe(parser);
+      parser.on('data', onData);
+
+      // setInterval(()=>{
+      //   sendStruct.fields.pitch++;
+      //   port.write(sendStruct.buffer(), err => {
+      //     if (err) {
+      //       return console.log('Error on write: ', err.message);
+      //     }
+      //     console.log('wrote: ' + sendStruct);
+      //   });
+      // }, 1500);
+    })
+    .catch(function(err) {
+      console.log(err);
     });
 
-    port.pipe(parser);
-    parser.on('data', onData);
-
-    // setInterval(()=>{
-    //   sendStruct.fields.pitch++;
-    //   port.write(sendStruct.buffer(), err => {
-    //     if (err) {
-    //       return console.log('Error on write: ', err.message);
-    //     }
-    //     console.log('wrote: ' + sendStruct);
-    //   });
-    // }, 1500);
-  })
-  .catch(function(err) {
-    console.log(err);
-  });
-
-function onData(data) {
-  console.log('from port: ' + data);
-  // port.write('>');
+  function onData(data) {
+    console.log('from port: ' + data);
+    // port.write('>');
+  }
 }
+
+
+establishSerialConnection();
 
 process.on('exit', function() {
   console.log('Goodbye!');
