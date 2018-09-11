@@ -356,8 +356,9 @@ io.on('connection', function(socket) {
       return;
     }
     serialStamp = Date.now();
-    //console.log('updating serialStamp: ' + serialStamp);
-    console.log('sending to serial: ' + messageToSend);
+    // console.log('updating serialStamp: ' + serialStamp);
+    console.log('sending to serial: ');
+    console.log(messageToSend);
     port.write(messageToSend, err => {
       if (err) {
         console.log('Error on write: ', err.message);
