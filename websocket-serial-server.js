@@ -366,8 +366,8 @@ io.on('connection', function(socket) {
         // establishSerialConnection();
         return;
       }
-      console.log('wrote: ');
-      console.log(messageToSend);
+      //console.log('wrote: ');
+      //console.log(messageToSend);
     });
   }
 });
