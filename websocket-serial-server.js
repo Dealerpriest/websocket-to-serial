@@ -11,8 +11,8 @@ let sendStruct = Struct()
                   .floatle('rotationSpeed')
                   .word16Sle('pitch')
                   .word16Sle('yaw')
-                  .word16Sle('height');
-                  .word16Ule('confirm')
+                  .word16Sle('height')
+                  .word16Ule('confirm');
 sendStruct.allocate();
 
 sendStruct.fields.confirm = confirmCorrect;
