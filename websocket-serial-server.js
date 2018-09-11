@@ -4,7 +4,9 @@ const socketIO = require('socket.io');
 const path = require('path');
 const Struct = require('struct');
 
+const confirmCorrect = 123;
 let sendStruct = Struct()
+            .word16Ule('confirm')
             .floatle('driveAngle')
             .floatle('driveSpeed')
             .floatle('rotationSpeed')
@@ -13,10 +15,14 @@ let sendStruct = Struct()
             .word16Sle('height');
 sendStruct.allocate();
 
+sendStruct.fields.confirm = confirmCorrect;
+
 const SerialPort = require('serialport');
 const Readline = SerialPort.parsers.Readline;
 const parser = new Readline();
 let port;
+
+let connectedToOrionBoard = false;
 
 //Here we define the function in order to call it again if it fails. First call is right below the definition.
 let establishSerialConnection = () => {
@@ -43,14 +49,22 @@ let establishSerialConnection = () => {
         // process.exit();
       }
 
-      port = new SerialPort(name, { baudRate: 115200 }, function(err) {
+      port = new SerialPort(name, { baudRate: 9600 }, function(err) {
         if (err) {
-          return console.log('Error: ', err.message);
+          return console.log('Error opening port: ', err.message);
         }
         console.log('opened a serialport!! Wuuuhuuu!');
+        connectedToOrionBoard = true;
       });
 
       port.pipe(parser);
+
+      port.on('error', (err)=>{
+        console.log("error on port: " + err);
+        connectedToOrionBoard = false;
+        establishSerialConnection();
+      })
+
       parser.on('data', onData);
 
       // setInterval(()=>{
@@ -168,7 +182,7 @@ io.on('connection', function(socket) {
   };
 
   let serialStamp = Date.now();
-  let minSerialInterval = 10;
+  let minSerialInterval = 50;
 
   serialTimeout = null;
 
@@ -217,6 +231,7 @@ io.on('connection', function(socket) {
   robot.on('robotKeyboardControl', data => {
     console.log('received robotKeyboardControl socket data: ' + data);
     // let messageType = 'motorControl';
+    let propagateToSerial = true;
     switch (data) {
       case 'ArrowUp':
         robotState.driveSpeed = 1.0;
@@ -269,18 +284,19 @@ io.on('connection', function(socket) {
         break;
       case 'h':
         // messageType = 'servoControl';
-        robotState.pitch--;
+        robotState.pitch++;
         robotState.pitch = Math.max(pitchMin, robotState.pitch);
         break;
       case 'n':
         // messageType = 'servoControl';
-        robotState.pitch++;
+        robotState.pitch--;
         robotState.pitch = Math.min(pitchMax, robotState.pitch);
         break;
       case '!b':
       case '!m':
       case '!h':
       case '!n':
+        propagateToSerial = false;
         // messageType = 'servoControl';
         break;
       case 'None':
@@ -314,7 +330,9 @@ io.on('connection', function(socket) {
     msg.yaw = robotState.yaw;
     msg.height = robotState.height;
 
-    sendToSerial(sendStruct.buffer());
+    if(propagateToSerial){
+      sendToSerial(sendStruct.buffer());
+    }
 
     robot.emit('robotState', JSON.stringify(robotState));
   });
@@ -324,14 +342,29 @@ io.on('connection', function(socket) {
 
   })
 
+  // TODO: There is some bug when we disconnect the board during operation. Probably related to reference and memory leak.
+  // It seems the establishConnection might be called from weird/several contexts as of now.
   function sendToSerial(messageToSend) {
+    if(!connectedToOrionBoard || !port.isOpen){
+      connectedToOrionBoard = false;
+      console.log("port not opened. Please make sure the orion board is connected");
+      port.close(err => {
+        delete port;
+        establishSerialConnection();
+      });
+      
+      return;
+    }
     serialStamp = Date.now();
     console.log('updating serialStamp: ' + serialStamp);
     console.log('sending to serial: ');
     console.log(messageToSend);
     port.write(messageToSend, err => {
       if (err) {
-        return console.log('Error on write: ', err.message);
+        console.log('Error on write: ', err.message);
+        connectedToOrionBoard = false;
+        // establishSerialConnection();
+        return;
       }
       console.log('wrote: ');
       console.log(messageToSend);
