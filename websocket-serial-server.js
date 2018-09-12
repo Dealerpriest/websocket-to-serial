@@ -182,7 +182,7 @@ io.on('connection', function(socket) {
   };
 
   let serialStamp = Date.now();
-  let minSerialInterval = 50;
+  let minSerialInterval = 100;
   serialTimeout = null;
 
   //ok. So this part is a little bit hacky where we just check for certain words in the incoming message and build our serialmessage accordingly.
