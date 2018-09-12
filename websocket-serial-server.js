@@ -24,18 +24,21 @@ let port;
 
 let connectedToOrionBoard = false;
 
+const teensyProductId = '0483';
+const orionProductId = '7523';
+
 //Here we define the function in order to call it again if it fails. First call is right below the definition.
 let establishSerialConnection = () => {
   SerialPort.list()
     .then(list => {
-      // console.log('serialports: ');
-      // console.log(list);
+      console.log('serialports: ');
+      console.log(list);
       let name;
       let orionFound = false;
       for (let i = 0; i < list.length; i++) {
         let candidate = list[i];
-        if (candidate.productId === '7523') {
-          console.log('found the orion at port (I.E. found a port with productId 7523): ' + candidate.comName);
+        if (candidate.productId === teensyProductId) {
+          console.log('found the device at port (I.E. found a port with correct productId): ' + candidate.comName);
           name = candidate.comName;
           orionFound = true;
           break;
