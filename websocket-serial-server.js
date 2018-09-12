@@ -6,13 +6,13 @@ const Struct = require('struct');
 
 const confirmCorrect = 123;
 let sendStruct = Struct()
-            .word16Ule('confirm')
-            .floatle('driveAngle')
-            .floatle('driveSpeed')
-            .floatle('rotationSpeed')
-            .word16Sle('pitch')
-            .word16Sle('yaw')
-            .word16Sle('height');
+                  .floatle('driveAngle')
+                  .floatle('driveSpeed')
+                  .floatle('rotationSpeed')
+                  .word16Sle('pitch')
+                  .word16Sle('yaw')
+                  .word16Sle('height')
+                  .word16Ule('confirm');
 sendStruct.allocate();
 
 sendStruct.fields.confirm = confirmCorrect;
@@ -375,7 +375,7 @@ io.on('connection', function(socket) {
 
 
     serialStamp = Date.now();
-    console.log('updating serialStamp: ' + serialStamp);
+    // console.log('updating serialStamp: ' + serialStamp);
     console.log('sending to serial: ');
     console.log(messageToSend);
     port.write(messageToSend, err => {
@@ -385,8 +385,8 @@ io.on('connection', function(socket) {
         // establishSerialConnection();
         return;
       }
-      console.log('wrote: ');
-      console.log(messageToSend);
+      //console.log('wrote: ');
+      //console.log(messageToSend);
     });
   }
 });
