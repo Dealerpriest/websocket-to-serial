@@ -183,7 +183,6 @@ io.on('connection', function(socket) {
 
   let serialStamp = Date.now();
   let minSerialInterval = 50;
-
   serialTimeout = null;
 
   //ok. So this part is a little bit hacky where we just check for certain words in the incoming message and build our serialmessage accordingly.
@@ -209,23 +208,23 @@ io.on('connection', function(socket) {
     let serialServoMessage =
       startCharacter + 's' + robotState.pitch + delimiter + state.yaw + endCharacter;
 
-    console.log('clearing timeout: ' + serialTimeout);
-    clearTimeout(serialTimeout);
-    let durationSinceSerialStamp = Date.now() - serialStamp;
-    if (durationSinceSerialStamp < minSerialInterval) {
-      console.log(
-        'setting a timeout for serialout because port might get overloaded'
-      );
-      serialTimeout = setTimeout(() => {
-        console.log('running timeout function');
-        sendToSerial(serialServoMessage);
-      }, minSerialInterval + 1);
-    } else {
-      console.log(
-        'no timeout! durationSinceSerialStamp: ' + durationSinceSerialStamp
-      );
-      sendToSerial(serialServoMessage);
-    }
+    // console.log('clearing timeout: ' + serialTimeout);
+    // clearTimeout(serialTimeout);
+    // let durationSinceSerialStamp = Date.now() - serialStamp;
+    // if (durationSinceSerialStamp < minSerialInterval) {
+    //   console.log(
+    //     'setting a timeout for serialout because port might get overloaded'
+    //   );
+    //   serialTimeout = setTimeout(() => {
+    //     console.log('running timeout function');
+    //     sendToSerial(serialServoMessage);
+    //   }, minSerialInterval + 1);
+    // } else {
+    //   console.log(
+    //     'no timeout! durationSinceSerialStamp: ' + durationSinceSerialStamp
+    //   );
+    //   sendToSerial(serialServoMessage);
+    // }
   });
 
   robot.on('robotKeyboardControl', data => {
@@ -355,6 +354,26 @@ io.on('connection', function(socket) {
       
       return;
     }
+
+    console.log('clearing timeout: ' + serialTimeout);
+    clearTimeout(serialTimeout);
+    let durationSinceSerialStamp = Date.now() - serialStamp;
+    if (durationSinceSerialStamp < minSerialInterval) {
+      console.log(
+        'Tooo sooooon! Setting a timeout for serialout because port might get overloaded'
+      );
+      serialTimeout = setTimeout(() => {
+        console.log('running timeout function');
+        sendToSerial(messageToSend);
+      }, (minSerialInterval - durationSinceSerialStamp + 1) );
+      return;
+    } else {
+      // console.log(
+      //   'Time to send serial! durationSinceSerialStamp: ' + durationSinceSerialStamp
+      // );
+    }
+
+
     serialStamp = Date.now();
     console.log('updating serialStamp: ' + serialStamp);
     console.log('sending to serial: ');
