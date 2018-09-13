@@ -45,7 +45,7 @@ let establishSerialConnection = () => {
         }
       }
       if (!orionFound) {
-        console.log("Couldn't find an orion board. Trying again!!!");
+        console.log("Couldn't find a device. Trying again!!!");
         console.log("(press ctrl+c to exit)");
         setTimeout(establishSerialConnection, 2000);
         return;
