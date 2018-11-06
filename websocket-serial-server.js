@@ -9,9 +9,11 @@ let sendStruct = Struct()
                   .floatle('driveAngle')
                   .floatle('driveSpeed')
                   .floatle('rotationSpeed')
-                  .word16Sle('pitch')
-                  .word16Sle('yaw')
-                  .word16Sle('height')
+                  .word16Ule('pitch')
+                  .word16Ule('yaw')
+                  .word16Ule('height')
+                  .word16Sle('rotationTarget')
+                  .floatle('distanceTarget')
                   .word16Ule('confirm');
 sendStruct.allocate();
 
@@ -175,6 +177,7 @@ io.on('connection', function(socket) {
   const yawMin = 20,
     yawMax = 160;
 
+  // we use this object to keep track of the robots state in order to let the client/robot page get updates of current state over the socket
   let robotState = {
     driveAngle: 0,
     driveSpeed: 0,
@@ -228,6 +231,23 @@ io.on('connection', function(socket) {
     //   );
     //   sendToSerial(serialServoMessage);
     // }
+  });
+
+  robot.on('clickToDrive', data => {
+    console.log('received clickToDrive socket data: ');
+    console.log(data);
+
+    let msg = sendStruct.fields;
+    msg.rotationTarget = data.angle;
+    msg.distanceTarget = data.distance;
+    msg.driveAngle = 0;
+    msg.driveSpeed = 0;
+    msg.rotationSpeed = 0;
+    msg.pitch = robotState.pitch;
+    msg.yaw = robotState.yaw;
+    msg.height = robotState.height;
+
+    sendToSerial(sendStruct.buffer());
   });
 
   robot.on('robotKeyboardControl', data => {
@@ -304,24 +324,11 @@ io.on('connection', function(socket) {
       case 'None':
         break;
     }
+
+    //calculate the driveAngle from the variables that were set above
     robotState.driveAngle =
       Math.PI * 2 + angleReference + angleOffsetMultiplier * angleOffset;
     robotState.driveAngle = robotState.driveAngle % (Math.PI * 2);
-
-    // let serialMessage = 
-    // startCharacter +
-    // robotState.driveAngle +
-    // delimiter +
-    // robotState.driveSpeed*0.2 +
-    // delimiter +
-    // robotState.rotationSpeed*0.2 +
-    // delimiter +
-    // robotState.pitch +
-    // delimiter +
-    // robotState.yaw +
-    // delimiter +
-    // '90' +
-    // endCharacter;
 
     // msg is a reference for r/w values into the struct
     let msg = sendStruct.fields;
@@ -331,6 +338,8 @@ io.on('connection', function(socket) {
     msg.pitch = robotState.pitch;
     msg.yaw = robotState.yaw;
     msg.height = robotState.height;
+    msg.rotationTarget = 0;
+    msg.distanceTarget = 0;
 
     if(propagateToSerial){
       sendToSerial(sendStruct.buffer());
