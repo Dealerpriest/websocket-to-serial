@@ -5,16 +5,17 @@ const path = require('path');
 const Struct = require('struct');
 
 const confirmCorrect = 123;
+// Keep all fields to a size of 4 bytes (float and word32) in order to not fuck up memory alignment
 let sendStruct = Struct()
                   .floatle('driveAngle')
                   .floatle('driveSpeed')
                   .floatle('rotationSpeed')
-                  .word16Ule('pitch')
-                  .word16Ule('yaw')
-                  .word16Ule('height')
-                  .word16Sle('rotationTarget')
+                  .word32Ule('pitch')
+                  .word32Ule('yaw')
+                  .word32Ule('height')
+                  .word32Sle('rotationTarget')
                   .floatle('distanceTarget')
-                  .word16Ule('confirm');
+                  .word32Ule('confirm');
 sendStruct.allocate();
 
 sendStruct.fields.confirm = confirmCorrect;
@@ -29,7 +30,8 @@ let connectedToOrionBoard = false;
 const teensyProductId = '0483';
 const orionProductId = '7523';
 
-//Here we define the function in order to call it again if it fails. First call is right below the definition.
+// Here we define the function in order to call it again if it fails. First call is right below the definition.
+// TODO: clear all registered timeouts when serial is lost.
 let establishSerialConnection = () => {
   SerialPort.list()
     .then(list => {
@@ -156,6 +158,7 @@ io.on('connection', function(socket) {
     console.log(data);
   });
 
+
   //messaging protocol
   let startCharacter = '<';
   let delimiter = ';';
@@ -190,6 +193,14 @@ io.on('connection', function(socket) {
   let serialStamp = Date.now();
   let minSerialInterval = 100;
   serialTimeout = null;
+
+  // setInterval(()=> {
+  //   console.log("--------------------");
+  //   console.log("********************");
+  //   console.log("--------------------");
+  //   console.log();
+  //   sendToSerial(sendStruct.buffer());
+  // }, 2000);
 
   //ok. So this part is a little bit hacky where we just check for certain words in the incoming message and build our serialmessage accordingly.
 
@@ -371,9 +382,9 @@ io.on('connection', function(socket) {
     clearTimeout(serialTimeout);
     let durationSinceSerialStamp = Date.now() - serialStamp;
     if (durationSinceSerialStamp < minSerialInterval) {
-      console.log(
-        'Tooo sooooon! Setting a timeout for serialout because port might get overloaded'
-      );
+      // console.log(
+      //   'Tooo sooooon! Setting a timeout for serialout because port might get overloaded'
+      // );
       serialTimeout = setTimeout(() => {
         console.log('running timeout function');
         sendToSerial(messageToSend);
@@ -388,7 +399,7 @@ io.on('connection', function(socket) {
 
     serialStamp = Date.now();
     // console.log('updating serialStamp: ' + serialStamp);
-    console.log('sending to serial: ');
+    console.log('sending ' + messageToSend.length + ' bytes to serial: ');
     console.log(messageToSend);
     port.write(messageToSend, err => {
       if (err) {
