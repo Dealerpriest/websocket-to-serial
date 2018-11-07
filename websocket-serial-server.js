@@ -370,6 +370,7 @@ io.on('connection', function(socket) {
     if(!connectedToOrionBoard || !port.isOpen){
       connectedToOrionBoard = false;
       console.log("port not opened. Please make sure the orion board is connected");
+      clearTimeout(serialTimeout);
       port.close(err => {
         delete port;
         establishSerialConnection();
